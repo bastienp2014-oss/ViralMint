@@ -42,6 +42,8 @@ class Settings(BaseSettings):
     ANTHROPIC_API_KEY: str = ""
     OPENAI_API_KEY: str = ""
     OPENROUTER_API_KEY: str = ""
+    OLLAMA_API_KEY: str = ""
+    OLLAMA_BASE_URL: str = "http://localhost:11434/v1"
 
     # ── Service keys (BYOK) ───────────────────────────
     # All optional — features gracefully degrade when keys are missing.

@@ -76,12 +76,13 @@ def build_frontend():
     """Install npm deps and build if dist/ doesn't exist or is stale."""
     fe_dir = ROOT / "frontend"
     dist_dir = fe_dir / "dist"
+    use_shell = platform.system() == "Windows"
     if not (fe_dir / "node_modules").exists():
         print("📦 Installing frontend dependencies...")
-        subprocess.run(["npm", "install"], cwd=fe_dir, check=True)
+        subprocess.run(["npm", "install"], cwd=fe_dir, check=True, shell=use_shell)
     if not dist_dir.exists():
         print("🏗️  Building frontend...")
-        subprocess.run(["npm", "run", "build"], cwd=fe_dir, check=True)
+        subprocess.run(["npm", "run", "build"], cwd=fe_dir, check=True, shell=use_shell)
         print("✅ Frontend built")
 
 # ─── Process management ───────────────────────────────────────────────────────

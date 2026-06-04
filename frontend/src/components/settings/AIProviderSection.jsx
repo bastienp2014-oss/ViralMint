@@ -17,18 +17,21 @@ const PROVIDER_LABEL = {
   anthropic: "Anthropic (Claude)",
   openai: "OpenAI (GPT)",
   openrouter: "OpenRouter (Claude / GPT / Gemini / Llama)",
+  ollama: "Ollama (Local)",
 }
 
 const KEY_PLACEHOLDER = {
   anthropic: "sk-ant-...",
   openai: "sk-...",
   openrouter: "sk-or-...",
+  ollama: "ollama",
 }
 
 const KEY_HINT = {
   anthropic: "Get yours at console.anthropic.com → API Keys",
   openai: "Get yours at platform.openai.com → API Keys",
   openrouter: "One key, every model — get yours at openrouter.ai/keys",
+  ollama: "Local server (defaults to http://localhost:11434/v1). No key required, write 'ollama' or any value.",
 }
 
 export default function AIProviderSection({ settings, updateSettings }) {
@@ -203,6 +206,7 @@ export default function AIProviderSection({ settings, updateSettings }) {
           <MenuItem value="anthropic">Anthropic (Claude)</MenuItem>
           <MenuItem value="openai">OpenAI (GPT)</MenuItem>
           <MenuItem value="openrouter">OpenRouter (Claude / GPT / Gemini / Llama)</MenuItem>
+          <MenuItem value="ollama">Ollama (Local)</MenuItem>
         </Select>
       </FormControl>
 

@@ -47,6 +47,16 @@ _DEFAULTS = {
                 "google/gemini-3.1-flash-lite",
             ],
         },
+        "ollama": {
+            "default_model": "llama3",
+            "models": [
+                "llama3",
+                "llama3.1",
+                "mistral",
+                "gemma2",
+                "phi3",
+            ],
+        },
     },
     "tts_providers": {
         "edge_tts":   {"label": "Edge TTS — Free",          "cost_1k": 0.0,   "requires_key": False},

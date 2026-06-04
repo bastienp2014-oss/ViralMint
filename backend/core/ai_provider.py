@@ -16,6 +16,7 @@ slug like `anthropic/claude-opus-4.7`.
 from enum import Enum
 from typing import AsyncIterator, Optional
 import logging
+import os
 
 from backend.config import settings
 from backend.core.crypto import decrypt_safe
@@ -28,6 +29,7 @@ class AIProvider(str, Enum):
     ANTHROPIC = "anthropic"
     OPENAI = "openai"
     OPENROUTER = "openrouter"
+    OLLAMA = "ollama"
 
 
 PROVIDER_DEFAULTS = {
@@ -37,6 +39,7 @@ PROVIDER_DEFAULTS = {
     # model so the experience matches the gateway's value prop. Users
     # can pick a cheaper model in Settings → Model dropdown.
     AIProvider.OPENROUTER: "anthropic/claude-opus-4.7",
+    AIProvider.OLLAMA:     "llama3",
 }
 
 # OpenRouter's optional analytics headers — show up on the public model
@@ -71,6 +74,9 @@ class AIClient:
                 yield chunk
         elif self.provider == AIProvider.OPENROUTER:
             async for chunk in self._openrouter_stream(messages, system, max_tokens):
+                yield chunk
+        elif self.provider == AIProvider.OLLAMA:
+            async for chunk in self._ollama_stream(messages, system, max_tokens):
                 yield chunk
 
     async def chat(
@@ -164,6 +170,33 @@ class AIClient:
             if delta:
                 yield delta
 
+    async def _ollama_stream(self, messages, system, max_tokens):
+        """Ollama is OpenAI-compatible — same client, local base URL."""
+        import openai
+        base_url = settings.OLLAMA_BASE_URL or "http://localhost:11434/v1"
+        client = openai.AsyncOpenAI(
+            api_key=self.api_key or "ollama",
+            base_url=base_url,
+            timeout=55.0,
+        )
+        full_messages = []
+        if system:
+            full_messages.append({"role": "system", "content": system})
+        full_messages.extend(messages)
+
+        stream = await client.chat.completions.create(
+            model=self.model,
+            messages=full_messages,
+            stream=True,
+            max_tokens=max_tokens,
+        )
+        async for chunk in stream:
+            if not chunk.choices:
+                continue
+            delta = chunk.choices[0].delta.content
+            if delta:
+                yield delta
+
 
 # ── Factory ───────────────────────────────────────────────────────────────────
 
@@ -173,13 +206,19 @@ def _resolve_user_provider_and_key(user_settings) -> tuple[Optional[AIProvider],
         return None, None
 
     provider_str = (getattr(user_settings, "ai_provider", None) or "").lower().strip()
-    encrypted_key = getattr(user_settings, "ai_api_key_encrypted", None)
-    if not provider_str or not encrypted_key:
+    if not provider_str:
         return None, None
 
     try:
         provider = AIProvider(provider_str)
     except ValueError:
+        return None, None
+
+    encrypted_key = getattr(user_settings, "ai_api_key_encrypted", None)
+    if provider == AIProvider.OLLAMA and not encrypted_key:
+        return provider, "ollama"
+
+    if not encrypted_key:
         return None, None
 
     api_key = decrypt_safe(encrypted_key) or ""
@@ -223,8 +262,14 @@ def get_ai_client(user_settings=None, **_kwargs) -> AIClient:
             api_key=settings.OPENROUTER_API_KEY,
             model=user_model,
         )
+    if settings.OLLAMA_API_KEY or os.getenv("OLLAMA_BASE_URL") or os.getenv("OLLAMA_API_KEY"):
+        return AIClient(
+            provider=AIProvider.OLLAMA,
+            api_key=settings.OLLAMA_API_KEY or "ollama",
+            model=user_model,
+        )
 
     raise AIKeyMissingError(
-        "No AI provider configured. Set ANTHROPIC_API_KEY, OPENAI_API_KEY, or "
-        "OPENROUTER_API_KEY in your .env, or configure your provider and key in Settings."
+        "No AI provider configured. Set ANTHROPIC_API_KEY, OPENAI_API_KEY, OPENROUTER_API_KEY, or "
+        "OLLAMA_API_KEY/OLLAMA_BASE_URL in your .env, or configure your provider and key in Settings."
     )
